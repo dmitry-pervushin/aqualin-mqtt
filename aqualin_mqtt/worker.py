@@ -59,7 +59,10 @@ class Worker:
         self.L.debug("Received %s" % str(message.payload.decode('utf-8')))
         command = str(message.payload.decode('utf-8'))
         if command.upper() == 'ON':
+            self.L.debug('Setting the device ON')
             self.aqualin.on()
+            self.L.debug('Enabling periodic updates')
+            schedule.every(30).seconds.do(self.publish_state).tag('periodic-updates')
         elif command.upper() == 'OFF':
             self.aqualin.off()
         else:
@@ -105,16 +108,23 @@ class Worker:
                 self.L.debug(f"replaced value of {k}: {v} => {kwmap[k][v]}")
                 v = kwmap[k][v]
             self.client.publish(self.config['mqtt']['topic'] + '/' + k, str(v), self.config['mqtt']['qos'], True)
+        return state
+
+    def __is_running(self, state):
+        return 'state' in state.keys() and state['state'] in (1, 'ON')
 
     def publish_state(self):
-        self.__publish_state(read_status = True, read_battery = False)
+        state = self.__publish_state(read_status = True, read_battery = False)
+        if not self.__is_running(state):
+            self.L.debug('No longer running, disabling periodic updates')
+            schedule.clear('periodic-updates')
 
     def publish_battery(self):
         self.__publish_state(read_status = False, read_battery = True)
 
     def timers(self):
-        schedule.every(300).seconds.do(self.publish_state)
-        schedule.every(1).hour.do(self.publish_battery)
+        schedule.every(12).hours.do(self.publish_state)
+        schedule.every(12).hours.do(self.publish_battery)
         return self
 
     def run(self):
