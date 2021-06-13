@@ -1,0 +1,9 @@
+[Unit]
+Description=Aqualin-MQTT daemon
+
+[Service]
+ExecStart=aqualin-mqtt-daemon -vvvvv -L /var/log/aqualin.log
+
+[Install]
+WantedBy=multi-user.target
+
