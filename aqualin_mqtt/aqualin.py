@@ -12,19 +12,22 @@ class Aqualin:
     def state(self, read_status = True, read_battery = False):
         timer = None
         valve = None
-        battery = None
+        percent = None
         dev = btle.Peripheral(self.mac)
-        status = dev.readCharacteristic(0x73) if read_status else None
-        battery = dev.readCharacteristic(0x81)[0] if read_battery else None
-        if read_status:
-            try:
-                timer = status[4]
-                valve = status[2]
-            except:
-                pass
+        status = dev.readCharacteristic(0x73) if read_status else ([None] * 5)
+        battery = dev.readCharacteristic(0x81) if read_battery else [None]
+        try:
+            timer = status[4]
+            valve = status[2]
+        except:
+            pass
+        try:
+            percent = battery[0]
+        except:
+            pass
         self.__delay()
         dev.disconnect()
-        return {'timer': timer, 'state': valve, 'battery': battery}
+        return {'timer': timer, 'state': valve, 'battery': percent}
 
     def __command(self, minutes):
         on = 1 if minutes else 0

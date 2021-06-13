@@ -8,7 +8,7 @@ setup(name='aqualin-mqtt',
       url='http://github.com/dmitry-pervushin',
       entry_points={
          'console_scripts': [
-             'aqualin-mqtt-daemon=aqualin_mqtt.main:main'
+             'aqualin-mqtt-daemon=aqualin_mqtt.__main__:main'
          ]
       },
       data_files = [('configs', ['aqualin.yaml'])],

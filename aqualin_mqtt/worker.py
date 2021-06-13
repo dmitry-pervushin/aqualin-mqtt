@@ -26,12 +26,12 @@ class Worker:
         },
         'general': {
             'interval' : 1,
-            'verbose'  : 0
+            'verbose'  : 0,
+            'log'      : None
         }
     }
     
     def __init__(self, yaml_cfg, cmdline_config):
-        logging.basicConfig(stream = sys.stdout, level = logging.DEBUG)
         self.L = logging.getLogger(self.__class__.__name__)
         self.config = self.config_defaults
         read_config = None
@@ -47,7 +47,17 @@ class Worker:
                 self.L.exception(e)
         self.config = update_dict(self.config, read_config or {})
         self.config = update_dict(self.config, cmdline_config or {})
-        self.L.setLevel(max(50 - self.config['general']['verbose'] * 10, 0))
+
+        loglevel = max(50 - self.config['general']['verbose'] * 10, 0)
+        self.L.setLevel(loglevel)
+        if self.config['general']['log']:
+            fh = logging.FileHandler(self.config['general']['log'])
+        else:
+            fh = logging.StreamHandler(sys.stdout)
+        fh.setLevel(loglevel)
+        fh.setFormatter(logging.Formatter('[%(levelname)1.1s] - %(asctime)19.19s - %(message)s'))
+        self.L.addHandler(fh)
+
         self.L.debug(self.config)
         self.client = mqtt.Client(self.config['mqtt']['client'])
         self.update_time = None
@@ -75,14 +85,13 @@ class Worker:
         self.L.info(f"Connected to {self.config['mqtt']['broker']}")
         self.client.subscribe(self.config['mqtt']['topic'] + "/set", self.config['mqtt']['qos'])
         self.L.info(f"subscribed to {self.config['mqtt']['topic'] + '/set'}")
-        self.publish_state()
-        self.publish_battery()
+        self.publish_everything()
 
     def mqtt_connect(self):
         self.L.info(f"Connecting to {self.config['mqtt']['broker']}:{self.config['mqtt']['port']}")
         self.client.on_message = lambda client, userdata, message: self.message(client, userdata, message)
         self.client.on_connect = lambda client, userdata, flags, rc: self.connect(client, userdata, flags, rc)
-        self.client.on_log = lambda client, userdata, level, buf: self.L.log(level, buf)
+        self.client.on_log = lambda client, userdata, level, buf: self.L.debug(buf)
         connected = False
         delay = 10
         while not connected:
@@ -122,9 +131,11 @@ class Worker:
     def publish_battery(self):
         self.__publish_state(read_status = False, read_battery = True)
 
+    def publish_everything(self):
+        self.__publish_state(read_status = True, read_battery = True)
+
     def timers(self):
-        schedule.every(12).hours.do(self.publish_state)
-        schedule.every(12).hours.do(self.publish_battery)
+        schedule.every(12).hours.do(self.publish_everything)
         return self
 
     def run(self):
@@ -146,6 +157,7 @@ def update_dict(d1, d2):
 def parse_arguments():
     p = argparse.ArgumentParser("aqualin-mqtt")
     p.add_argument("-v", dest="general.verbose", action = "count", default = 0, help = "verbosity level")
+    p.add_argument("-L", dest="general.log", action = "store", help = "log file")
     a = p.parse_args()
     result = {}
     for (k, v) in vars(a).items():
