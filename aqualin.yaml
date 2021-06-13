@@ -1,0 +1,23 @@
+##
+# main configuration file for aqualin-mqtt daemon
+#
+# entries that are commented out are set to their default values
+##
+aqualin:
+   ble: 00:35:FF:2C:D5:9D
+
+mqtt:
+   broker: 192.168.77.6
+#   broker: localhost
+#   port: 1883
+#   client: None
+#   topic: "aqualin/device"
+#   keepalive: 60
+#   qos: False
+#   user: None
+#   passwd: None
+
+#general:
+#   interval: 1
+#   loglevel: 1 # can be 0-6
+
